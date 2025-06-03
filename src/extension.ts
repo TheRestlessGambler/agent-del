@@ -8,22 +8,29 @@ import { scaffoldTodo } from './commands/scaffoldTodo';
 import { generateCode } from './commands/generateCode';
 import { executeCommand } from './commands/executeCommand';
 import { ChatPanel } from './chatPanel';
+import { getAPIKey } from './apiKeyManager';
 
 // Load .env variables at startup
 dotenv.config();
 
-export function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext) {
+  try {
+    await getAPIKey(context);
+  } catch (error) {
+    vscode.window.showErrorMessage('API Key is required to use the AI Agent.');
+    return;
+  }
   console.log('AI Agent Extension activated');
 
   context.subscriptions.push(
     vscode.commands.registerCommand('aiAgent.checkTools', checkTools),
-    vscode.commands.registerCommand('aiAgent.runAgent', runAIAgent),
+    vscode.commands.registerCommand('aiAgent.runAgent', () => runAIAgent(context)),
     vscode.commands.registerCommand('aiAgent.setupReactApp', setupReactApp),
     vscode.commands.registerCommand('aiAgent.scaffoldTodo', scaffoldTodo),
     vscode.commands.registerCommand('aiAgent.generateCode', generateCode),
     vscode.commands.registerCommand('aiAgent.executeCommand', executeCommand),
     vscode.commands.registerCommand('aiAgent.openChat', () => {
-      ChatPanel.createOrShow(context.extensionUri);
+      ChatPanel.createOrShow(context.extensionUri, context);  // Pass context here
     })
   );
 }

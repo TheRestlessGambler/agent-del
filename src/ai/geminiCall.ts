@@ -1,22 +1,25 @@
 import axios from 'axios';
+import { getAPIKey } from '../apiKeyManager';
+import * as vscode from 'vscode';
 
 
-const GEMINI_API_URL = process.env.GEMINI_API_URL!;
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY!;
 
-interface GeminiResponse {
-  choices: { text: string }[];
-}
+export async function callGeminiAPI(prompt: string, context: vscode.ExtensionContext): Promise<string> {
+  const GEMINI_API_KEY = await getAPIKey(context);
+  if (!GEMINI_API_KEY) {
+    throw new Error('Gemini API Key not available.');
+  }
 
-export async function callGeminiAPI(prompt: string): Promise<string> {
   try {
-    const response = await axios.post<GeminiResponse>(
+
+    const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+    const response = await axios.post(
       GEMINI_API_URL,
       {
         model: 'gemini-2.0-flash',
         prompt,
         max_tokens: 200,
-        temperature: 0.8,
+        temperature: 0.7,
       },
       {
         headers: {

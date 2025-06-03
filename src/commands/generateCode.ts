@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { callGeminiAPI } from '../ai/geminiCall';
 
-export async function generateCode() {
+export async function generateCode(context: vscode.ExtensionContext) {
     const workspaceFolders = vscode.workspace.workspaceFolders;
     if (!workspaceFolders) {
         vscode.window.showErrorMessage('Open your project folder first.');
@@ -21,7 +21,7 @@ Use hooks for state management. Provide complete code including imports.`;
 
     try {
         vscode.window.showInformationMessage('Requesting AI to generate ToDo component...');
-        const code = await callGeminiAPI(prompt);
+        const code = await callGeminiAPI(prompt, context);
 
         const todoFilePath = path.join(componentsDir, 'Todo.tsx');
         fs.writeFileSync(todoFilePath, code);

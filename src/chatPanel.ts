@@ -5,18 +5,17 @@ export class ChatPanel {
   public static currentPanel: ChatPanel | undefined;
   private readonly _panel: vscode.WebviewPanel;
   private readonly _extensionUri: vscode.Uri;
+  private readonly _context: vscode.ExtensionContext;
   private _disposables: vscode.Disposable[] = [];
 
-  public static createOrShow(extensionUri: vscode.Uri) {
+  public static createOrShow(extensionUri: vscode.Uri, context: vscode.ExtensionContext) {
     const column = vscode.window.activeTextEditor ? vscode.window.activeTextEditor.viewColumn : undefined;
 
-    // If panel already exists, reveal it
     if (ChatPanel.currentPanel) {
       ChatPanel.currentPanel._panel.reveal(column);
       return;
     }
 
-    // Otherwise, create new panel
     const panel = vscode.window.createWebviewPanel(
       'aiChat',
       'AI Agent Chat',
@@ -24,22 +23,21 @@ export class ChatPanel {
       { enableScripts: true }
     );
 
-    ChatPanel.currentPanel = new ChatPanel(panel, extensionUri);
+    ChatPanel.currentPanel = new ChatPanel(panel, extensionUri, context);
   }
 
-  private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri) {
+  private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri, context: vscode.ExtensionContext) {
     this._panel = panel;
     this._extensionUri = extensionUri;
+    this._context = context;
 
-    // Set HTML content
     this._panel.webview.html = this._getHtmlForWebview();
 
-    // Listen for messages from the webview
     this._panel.webview.onDidReceiveMessage(
       async (message) => {
         switch (message.command) {
           case 'sendMessage':
-            const reply = await callGeminiAPI(message.text);
+            const reply = await callGeminiAPI(message.text, this._context);
             this._panel.webview.postMessage({ command: 'showReply', text: reply });
             break;
         }
@@ -48,7 +46,6 @@ export class ChatPanel {
       this._disposables
     );
 
-    // Clean up on dispose
     this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
   }
 
