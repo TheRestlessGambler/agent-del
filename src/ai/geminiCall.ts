@@ -61,6 +61,7 @@ Your response:
 
 export async function callGeminiAPI(userInput: string, context: vscode.ExtensionContext): Promise<string> {
   const apiKey = await getAPIKey(context);
+  
   if (!apiKey) throw new Error('Missing Gemini API key');
   const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 

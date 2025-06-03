@@ -17,6 +17,10 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.commands.registerCommand('aiAgent.openChat', () => {
       ChatPanel.createOrShow(context.extensionUri, context);
+    }),
+    vscode.commands.registerCommand('aiAgent.clearApiKey', async () => {
+      await context.secrets.delete('geminiApiKey');
+      vscode.window.showInformationMessage('Gemini API key cleared.');
     })
   );
 }

@@ -20,7 +20,7 @@ export async function getAPIKey(context: vscode.ExtensionContext): Promise<strin
     // Save securely for future use
     await context.secrets.store(API_KEY_SECRET, inputKey);
     vscode.window.showInformationMessage('Gemini API Key saved securely.');
-    return inputKey;
+    return inputKey.toString();
   } else {
     vscode.window.showErrorMessage('API Key is required to use the AI Agent.');
     return undefined;
