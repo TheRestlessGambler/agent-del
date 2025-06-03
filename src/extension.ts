@@ -1,26 +1,33 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
+import * as dotenv from 'dotenv';
 
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
+import { checkTools } from './commands/checkTools';
+import { runAIAgent } from './agent';
+import { setupReactApp } from './commands/setupReactApp';
+import { scaffoldTodo } from './commands/scaffoldTodo';
+import { generateCode } from './commands/generateCode';
+import { executeCommand } from './commands/executeCommand';
+import { ChatPanel } from './chatPanel';
+
+// Load .env variables at startup
+dotenv.config();
+
 export function activate(context: vscode.ExtensionContext) {
+  console.log('AI Agent Extension activated');
 
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "agent-del" is now active!');
-
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with registerCommand
-	// The commandId parameter must match the command field in package.json
-	const disposable = vscode.commands.registerCommand('agent-del.helloWorld', () => {
-		// The code you place here will be executed every time your command is executed
-		// Display a message box to the user
-		vscode.window.showInformationMessage('Hello World from Agent-Del!');
-	});
-
-	context.subscriptions.push(disposable);
+  context.subscriptions.push(
+    vscode.commands.registerCommand('aiAgent.checkTools', checkTools),
+    vscode.commands.registerCommand('aiAgent.runAgent', runAIAgent),
+    vscode.commands.registerCommand('aiAgent.setupReactApp', setupReactApp),
+    vscode.commands.registerCommand('aiAgent.scaffoldTodo', scaffoldTodo),
+    vscode.commands.registerCommand('aiAgent.generateCode', generateCode),
+    vscode.commands.registerCommand('aiAgent.executeCommand', executeCommand),
+    vscode.commands.registerCommand('aiAgent.openChat', () => {
+      ChatPanel.createOrShow(context.extensionUri);
+    })
+  );
 }
 
-// This method is called when your extension is deactivated
-export function deactivate() {}
+export function deactivate() {
+  console.log('AI Agent Extension deactivated');
+}
