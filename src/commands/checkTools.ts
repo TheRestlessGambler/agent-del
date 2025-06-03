@@ -1,5 +1,4 @@
 import { exec } from 'child_process';
-import * as vscode from 'vscode';
 
 function execCommand(command: string): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -10,40 +9,48 @@ function execCommand(command: string): Promise<string> {
   });
 }
 
-export async function checkTools() {
-  const tools = ['node -v', 'npm -v', 'vite --version'];
+/**
+ * Checks Node, npm, and Vite.  
+ * Installs Vite automatically if missing and autoInstallMissing is true.
+ */
+export async function checkTools(autoInstallMissing = false): Promise<string> {
+  const results: string[] = [];
+  const tools = ['node -v', 'npm -v', 'npx vite --version'];
   const missing: string[] = [];
+
+  results.push('Checking system PATH...');
+  results.push(`Current PATH: ${process.env.PATH || 'undefined'}`);
 
   for (const cmd of tools) {
     try {
       const version = await execCommand(cmd);
-      vscode.window.showInformationMessage(`${cmd.split(' ')[0]} found: ${version}`);
-    } catch {
+      results.push(`${cmd.split(' ')[0]} found: ${version}`);
+    } catch (err) {
+      results.push(`Error running ${cmd}: ${err}`);
       missing.push(cmd.split(' ')[0]);
     }
   }
 
   if (missing.length) {
-    vscode.window.showWarningMessage(`Missing: ${missing.join(', ')}.`);
+    results.push(`Missing: ${missing.join(', ')}.`);
 
     if (missing.includes('vite')) {
-      const install = await vscode.window.showInformationMessage(
-        'Vite is missing. Would you like to install it globally now?',
-        'Yes',
-        'No'
-      );
-
-      if (install === 'Yes') {
+      if (autoInstallMissing) {
+        results.push('Attempting to install Vite globally...');
         try {
-          vscode.window.showInformationMessage('Installing Vite globally...');
           await execCommand('npm install -g vite');
-          vscode.window.showInformationMessage('Vite installed successfully.');
-        } catch (error) {
-          vscode.window.showErrorMessage(`Failed to install Vite: ${error}`);
+          results.push('Vite installed successfully.');
+        } catch (installErr) {
+          results.push(`Failed to install Vite: ${installErr}`);
+          results.push('Please install Vite manually using: npm install -g vite');
         }
+      } else {
+        results.push('Vite is missing. Please install it globally by running: npm install -g vite');
       }
     }
   } else {
-    vscode.window.showInformationMessage('All tools installed.');
+    results.push('All tools installed.');
   }
+
+  return results.join('\n');
 }

@@ -1,22 +1,25 @@
 import { exec } from 'child_process';
 import * as vscode from 'vscode';
 
-export async function executeCommand(command: string) {
-  if (!command) {
-    vscode.window.showErrorMessage('No command provided to execute.');
-    return;
-  }
-
-  vscode.window.showInformationMessage(`Executing command: ${command}`);
-
-  exec(command, (error, stdout, stderr) => {
-    if (error) {
-      vscode.window.showErrorMessage(`Error: ${error.message}`);
-      return;
-    }
-    if (stderr) {
-      vscode.window.showWarningMessage(`Warning: ${stderr}`);
-    }
-    vscode.window.showInformationMessage(`Output:\n${stdout}`);
+function execCommand(command: string, cwd?: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    exec(command, { cwd }, (error, stdout, stderr) => {
+      if (error) reject(stderr || error.message);
+      else resolve(stdout.trim());
+    });
   });
+}
+
+export async function executeCommand(command: string): Promise<string> {
+  const folders = vscode.workspace.workspaceFolders;
+  if (!folders) return 'No workspace folder open to run commands.';
+
+  const projectPath = folders[0].uri.fsPath;
+
+  try {
+    const output = await execCommand(command, projectPath);
+    return `Command output:\n${output}`;
+  } catch (error: any) {
+    return `Failed to execute command: ${error.message || error}`;
+  }
 }
