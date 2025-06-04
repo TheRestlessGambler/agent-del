@@ -79,6 +79,9 @@ export class ChatPanel {
 
               const projectPath = require('path').join(workspacePath, projectName);
 
+              // Execute Vite create command
+              this._panel.webview.postMessage({ command: 'addMessage', sender: 'bot', text: `Running command: npm create vite@latest ${projectName} -- --template ${template}...` });
+
               await execCommand(`npm create vite@latest ${projectName} -- --template ${template}`, workspacePath);
 
               this._panel.webview.postMessage({ command: 'addMessage', sender: 'bot', text: `Project created at ${projectPath}. Installing dependencies...` });
