@@ -2,10 +2,10 @@ import axios from 'axios';
 import * as vscode from 'vscode';
 import { getAPIKey } from '../apiKeyManager';
 
-
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
 
 const SYSTEM_PROMPT = `
-You are an AI assistant embedded inside a VS Code extension that helps users automate software development tasks by executing internal commands. You do NOT write raw code or detailed step-by-step instructions yourself unless explicitly asked for code snippets unrelated to automatable tasks.
+You are an AI assistant embedded inside a VS Code extension that helps users automate software development tasks by executing internal commands. You do NOT write raw code or detailed instructions yourself unless explicitly asked for code snippets unrelated to automatable tasks.
 
 Use the following guidelines:
 
@@ -53,39 +53,57 @@ Remember, you only reply with user-friendly status messages. Your extension will
 
 ---
 
-User Input: {user_input}
+User Input: {{USER_INPUT}}
 
 Your response:
-
 `;
 
 export async function callGeminiAPI(userInput: string, context: vscode.ExtensionContext): Promise<string> {
   const apiKey = await getAPIKey(context);
-  
   if (!apiKey) throw new Error('Missing Gemini API key');
-  const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
-  // Replace placeholder with actual user input
+  // Combine system prompt with user input
   const prompt = SYSTEM_PROMPT.replace('{{USER_INPUT}}', userInput);
+
+  const requestBody = {
+    contents: [
+      {
+        parts: [
+          { text: prompt }
+        ]
+      }
+    ]
+  };
 
   try {
     const response = await axios.post(
-      GEMINI_API_URL,
-      {
-        model: 'gemini-2.0-flash',
-        prompt,
-        max_tokens: 250,
-        temperature: 0.7,
-      },
+      `${GEMINI_API_URL}?key=${apiKey}`,
+      requestBody,
       {
         headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
-        },
+          'Content-Type': 'application/json'
+        }
       }
     );
+    const content = response.data?.candidates?.[0]?.content;
 
-    return response.data.choices?.[0]?.text?.trim() || 'No response from AI.';
+    if (!content) {
+      throw new Error('No content returned from Gemini');
+    }
+
+    if (typeof content === 'string') {
+      return content.trim();
+    } else if (content?.parts && Array.isArray(content.parts)) {
+      // Join all text parts
+      return content.parts.map((part: any) => part.text).join('').trim();
+    } else if (typeof content === 'object' && content.text) {
+      return content.text.trim();
+    } else {
+      console.log('Gemini response content:', content);
+      throw new Error('Unexpected content format from Gemini API');
+    }
+
+
   } catch (error: any) {
     throw new Error(`Gemini API call failed: ${error.message || error}`);
   }

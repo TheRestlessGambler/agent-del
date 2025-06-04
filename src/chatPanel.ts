@@ -51,13 +51,16 @@ export class ChatPanel {
             let reply = '';
 
             if (/(check|verify).*(tool|node|npm|vite)/.test(lowerText)) {
+              this._panel.webview.postMessage({ command: 'addMessage', sender: 'bot', text: 'Checking Node, npm, and Vite versions...' });
               const { checkTools } = await import('./commands/checkTools.js');
               reply = await checkTools(true);
             } else if (/(setup|create).*(react|vite).*(app|project)/.test(lowerText)) {
+              this._panel.webview.postMessage({ command: 'addMessage', sender: 'bot', text: 'Setting up React app with Vite...' });
               const { setupReactApp } = await import('./commands/setupReactApp.js');
               await setupReactApp();
               reply = 'React app setup complete!';
             } else if (/(generate|make|create).*(todo|to-do).*(component|app|project)?/.test(lowerText)) {
+              this._panel.webview.postMessage({ command: 'addMessage', sender: 'bot', text: 'Generating your React ToDo component...' });
               const { generateCode } = await import('./commands/generateCode.js');
               await generateCode(this._context);
               reply = 'ToDo component generated.';
