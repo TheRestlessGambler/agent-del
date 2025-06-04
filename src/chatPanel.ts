@@ -43,43 +43,63 @@ export class ChatPanel {
           if (!userText) return;
 
           this._panel.webview.postMessage({ command: 'addMessage', text: userText, sender: 'user' });
-
           this._panel.webview.postMessage({ command: 'showLoading', text: 'AI is typing...' });
 
           try {
             const lowerText = userText.toLowerCase();
             let reply = '';
 
-            if (/(check|verify).*(tool|node|npm|vite)/.test(lowerText)) {
-              this._panel.webview.postMessage({ command: 'addMessage', sender: 'bot', text: 'Checking Node, npm, and Vite versions...' });
-              const { checkTools } = await import('./commands/checkTools.js');
-              reply = await checkTools(true);
-            } else if (/(setup|create).*(react|vite).*(app|project)/.test(lowerText)) {
+            // Check for React app setup request
+            if (/(setup|create).*(react|vite).*(app|project)/.test(lowerText)) {
               this._panel.webview.postMessage({ command: 'addMessage', sender: 'bot', text: 'Setting up React app with Vite...' });
-              const { setupReactApp } = await import('./commands/setupReactApp.js');
-              await setupReactApp();
-              reply = 'React app setup complete!';
-            } else if (/(generate|make|create).*(todo|to-do).*(component|app|project)?/.test(lowerText)) {
-              this._panel.webview.postMessage({ command: 'addMessage', sender: 'bot', text: 'Generating your React ToDo component...' });
-              const { generateCode } = await import('./commands/generateCode.js');
-              await generateCode(this._context);
-              reply = 'ToDo component generated.';
-            } else if (/run command (.+)/.test(lowerText)) {
-              const { executeCommand } = await import('./commands/executeCommand.js');
-              const cmdMatch = lowerText.match(/run command (.+)/);
-              if (cmdMatch && cmdMatch[1]) {
-                const cmd = cmdMatch[1].trim();
-                await executeCommand(cmd);
-                reply = `Executed command: ${cmd}`;
-              } else {
-                reply = 'Please provide a command after "run command".';
+
+              // Step 1: Ask user for project details (name, template)
+              const projectName = await vscode.window.showInputBox({ prompt: 'What should be the project folder name?' });
+              if (!projectName) {
+                this._panel.webview.postMessage({ command: 'addMessage', sender: 'bot', text: 'Project creation cancelled.' });
+                return;
               }
+
+              const template = await vscode.window.showQuickPick(['react-ts', 'react', 'vanilla-ts', 'vanilla'], {
+                placeHolder: 'Choose Vite template (React TypeScript, React JavaScript, Vanilla TypeScript, Vanilla JavaScript)',
+              });
+              if (!template) {
+                this._panel.webview.postMessage({ command: 'addMessage', sender: 'bot', text: 'Project creation cancelled.' });
+                return;
+              }
+
+              this._panel.webview.postMessage({ command: 'addMessage', sender: 'bot', text: `Creating React app in folder ${projectName}...` });
+
+              // Step 2: Create React app using Vite
+              const { execCommand } = await import('./utils/execCommand.ts');
+              const workspacePath = vscode.workspace.workspaceFolders?.[0].uri.fsPath;
+              if (!workspacePath) {
+                throw new Error('No workspace folder available.');
+              }
+
+              const projectPath = require('path').join(workspacePath, projectName);
+
+              await execCommand(`npm create vite@latest ${projectName} -- --template ${template}`, workspacePath);
+
+              this._panel.webview.postMessage({ command: 'addMessage', sender: 'bot', text: `Project created at ${projectPath}. Installing dependencies...` });
+              
+              await execCommand('npm install', projectPath);
+
+              this._panel.webview.postMessage({ command: 'addMessage', sender: 'bot', text: 'Dependencies installed.' });
+
+              // Step 3: Generate ToDo component
+              this._panel.webview.postMessage({ command: 'addMessage', sender: 'bot', text: 'Generating your React ToDo component...' });
+              const { generateCode } = await import('./commands/generateCode.ts');
+              await generateCode(this._context, projectPath);
+
+              reply = 'React app setup complete and ToDo component generated!';
             } else {
               reply = await callGeminiAPI(userText, this._context);
             }
 
             this._panel.webview.postMessage({ command: 'hideLoading' });
             this._panel.webview.postMessage({ command: 'addMessage', text: reply, sender: 'bot' });
+
           } catch (error: any) {
             this._panel.webview.postMessage({ command: 'hideLoading' });
             this._panel.webview.postMessage({ command: 'addMessage', text: `Error: ${error.message || error}`, sender: 'bot' });
